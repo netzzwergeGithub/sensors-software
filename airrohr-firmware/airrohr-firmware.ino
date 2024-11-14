@@ -2609,6 +2609,45 @@ static void webserver_data_json()
 	server.send(200, FPSTR(TXT_CONTENT_TYPE_JSON), s1);
 }
 
+
+/*****************************************************************
+ * Webserver data_extended.json                                           *
+ *****************************************************************/
+static void webserver_data_extended_json()
+{
+	String s1;
+	unsigned long age = 0;
+
+	debug_outln_info(F("ws: data json..."));
+	if (!count_sends)
+	{
+		s1 = FPSTR(data_first_part);
+		s1 += "]}";
+		age = cfg::sending_intervall_ms - msSince(starttime);
+		if (age > cfg::sending_intervall_ms)
+		{
+			age = 0;
+		}
+		age = 0 - age;
+	}
+	else
+	{
+		s1 = last_data_string;
+		age = msSince(starttime);
+		if (age > cfg::sending_intervall_ms)
+		{
+			age = 0;
+		}
+	}
+	String s2 = F(", \"age\":\"");
+	s2 += String((long)((age + 500) / 1000));
+	s2 += F("\", \"esp_chipid\":\"");
+	s2 += String(esp_chipid);
+	s2 += F("\", \"sensordatavalues\"");
+	s1.replace(F(", \"sensordatavalues\""), s2);
+	server.send(200, FPSTR(TXT_CONTENT_TYPE_JSON), s1);
+}
+
 /*****************************************************************
  * Webserver metrics endpoint                                    *
  *****************************************************************/
@@ -2725,6 +2764,7 @@ static void setup_webserver()
 	server.on(F("/removeConfig"), webserver_removeConfig);
 	server.on(F("/reset"), webserver_reset);
 	server.on(F("/data.json"), webserver_data_json);
+	server.on(F("/data_extended.json"), webserver_data_extended_json);
 	server.on(F("/metrics"), webserver_metrics_endpoint);
 	server.on(F("/favicon.ico"), webserver_favicon);
 	server.on(F(STATIC_PREFIX), webserver_static);
