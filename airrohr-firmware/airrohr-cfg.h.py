@@ -21,6 +21,7 @@ Bool		ips_read
 Bool		sps30_read
 Bool		bmp_read
 Bool		bmx280_read
+Bool		ahtx_read
 Bool		sht3x_read
 Bool		scd30_read
 Bool		ds18b20_read

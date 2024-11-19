@@ -96,6 +96,8 @@ enum ConfigShapeId {
 	Config_pwd_influx,
 	Config_measurement_name_influx,
 	Config_ssl_influx,
+	Config_ahtX_read,
+	
 };
 static constexpr char CFG_KEY_CURRENT_LANG[] PROGMEM = "current_lang";
 static constexpr char CFG_KEY_WLANSSID[] PROGMEM = "wlanssid";
@@ -117,6 +119,7 @@ static constexpr char CFG_KEY_IPS_READ[] PROGMEM = "ips_read";
 static constexpr char CFG_KEY_SPS30_READ[] PROGMEM = "sps30_read";
 static constexpr char CFG_KEY_BMP_READ[] PROGMEM = "bmp_read";
 static constexpr char CFG_KEY_BMX280_READ[] PROGMEM = "bmx280_read";
+static constexpr char CFG_KEY_AHTX_READ[] PROGMEM = "ahtx_read";
 static constexpr char CFG_KEY_SHT3X_READ[] PROGMEM = "sht3x_read";
 static constexpr char CFG_KEY_SCD30_READ[] PROGMEM = "scd30_read";
 static constexpr char CFG_KEY_DS18B20_READ[] PROGMEM = "ds18b20_read";
@@ -240,4 +243,6 @@ static constexpr ConfigShapeEntry configShape[] PROGMEM = {
 	{ Config_Type_Password, sizeof(cfg::pwd_influx)-1, CFG_KEY_PWD_INFLUX, cfg::pwd_influx },
 	{ Config_Type_String, sizeof(cfg::measurement_name_influx)-1, CFG_KEY_MEASUREMENT_NAME_INFLUX, cfg::measurement_name_influx },
 	{ Config_Type_Bool, 0, CFG_KEY_SSL_INFLUX, &cfg::ssl_influx },
+	{ Config_Type_Bool, 0, CFG_KEY_AHTX_READ, &cfg::ahtx_read },
+	
 };

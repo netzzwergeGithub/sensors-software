@@ -15,9 +15,9 @@ const char WWW_PASSWORD[] PROGMEM = "";
 #define FS_PWD "airrohrcfg"
 
 // Where to send the data?
-#define SEND2SENSORCOMMUNITY 1
+#define SEND2SENSORCOMMUNITY 0
 #define SSL_SENSORCOMMUNITY 0
-#define SEND2MADAVI 1
+#define SEND2MADAVI 0
 #define SSL_MADAVI 0
 #define SEND2SENSEMAP 0
 #define SEND2FSAPP 0
@@ -237,7 +237,7 @@ static const char MEASUREMENT_NAME_INFLUX[] PROGMEM = "feinstaub";
 #define PPD_API_PIN 5
 
 // SDS011, the more expensive version of the particle sensor
-#define SDS_READ 1
+#define SDS_READ 0
 #define SDS_API_PIN 1
 
 // PMS1003, PMS300, 3PMS5003, PMS6003, PMS7003
@@ -268,9 +268,12 @@ static const char MEASUREMENT_NAME_INFLUX[] PROGMEM = "feinstaub";
 #define BMP_API_PIN 3
 
 // BMP280/BME280, temperature, pressure (humidity on BME280)
-#define BMX280_READ 1
+#define BMX280_READ 0
 #define BMP280_API_PIN 3
 #define BME280_API_PIN 11
+
+#define AHTX0_READ 1
+
 
 // SHT3x, temperature, pressure
 #define SHT3X_READ 0
@@ -300,7 +303,7 @@ static const char MEASUREMENT_NAME_INFLUX[] PROGMEM = "feinstaub";
 #define MHZ19_READ 0
 
 // automatic firmware updates
-#define AUTO_UPDATE 1
+#define AUTO_UPDATE 0
 
 // use beta firmware
 #define USE_BETA 0

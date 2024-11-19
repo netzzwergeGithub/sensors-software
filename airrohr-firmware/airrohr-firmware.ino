@@ -106,6 +106,7 @@ String SOFTWARE_VERSION(SOFTWARE_VERSION_STR);
 #include <Adafruit_HTU21DF.h>
 #include <Adafruit_BMP085.h>
 #include <Adafruit_SHT31.h>
+#include <Adafruit_AHTX0.h>
 #include <StreamString.h>
 #include <DallasTemperature.h>
 #include <SparkFun_SCD30_Arduino_Library.h>
@@ -171,6 +172,7 @@ namespace cfg
 	bool sps30_read = SPS30_READ;
 	bool bmp_read = BMP_READ;
 	bool bmx280_read = BMX280_READ;
+	bool ahtx_read = AHTX0_READ;
 	char height_above_sealevel[8] = "0";
 	bool sht3x_read = SHT3X_READ;
 	bool scd30_read = SCD30_READ;
@@ -254,6 +256,7 @@ long int sample_count = 0;
 bool htu21d_init_failed = false;
 bool bmp_init_failed = false;
 bool bmx280_init_failed = false;
+bool ahtX_init_failed = false;
 bool sht3x_init_failed = false;
 bool scd30_init_failed = false;
 bool dnms_init_failed = false;
@@ -335,6 +338,12 @@ Adafruit_BMP085 bmp;
 BMX280 bmx280;
 const uint8_t bmx280_default_i2c_address = 0x77;
 const uint8_t bmx280_alternate_i2c_address = 0x76;
+
+/*****************************************************************
+ * AHT20 declaration                                        *
+ *****************************************************************/
+Adafruit_AHTX0 ahtX;
+const uint8_t ahtX_default_i2c_address = 0x00;
 
 /*****************************************************************
  * SHT3x declaration                                             *
@@ -451,6 +460,8 @@ float last_value_BMP_P = -1.0;
 float last_value_BMX280_T = -128.0;
 float last_value_BMX280_P = -1.0;
 float last_value_BME280_H = -1.0;
+float last_value_AHTX_T = -128.0;
+float last_value_AHTX_H = -1.0;
 float last_value_DHT_T = -128.0;
 float last_value_DHT_H = -1.0;
 float last_value_DS18B20_T = -1.0;
@@ -1762,6 +1773,7 @@ static void webserver_config_send_body_get(String &page_content)
 	add_form_checkbox_sensor(Config_dht_read, FPSTR(INTL_DHT22));
 	add_form_checkbox_sensor(Config_htu21d_read, FPSTR(INTL_HTU21D));
 	add_form_checkbox_sensor(Config_bmx280_read, FPSTR(INTL_BMX280));
+	add_form_checkbox_sensor(Config_ahtX_read, FPSTR(INTL_AHTX));
 	add_form_checkbox_sensor(Config_sht3x_read, FPSTR(INTL_SHT3X));
 	add_form_checkbox_sensor(Config_scd30_read, FPSTR(INTL_SCD30));
 
@@ -2220,6 +2232,14 @@ static void webserver_values()
 		}
 		page_content += FPSTR(EMPTY_ROW);
 	}
+	if (cfg::ahtx_read && !ahtX_init_failed)
+	{
+		add_table_t_value(FPSTR("AHT20"), FPSTR(INTL_TEMPERATURE), last_value_AHTX_T);
+		add_table_h_value(FPSTR("AHT20"), FPSTR(INTL_HUMIDITY), last_value_AHTX_H);
+	
+		page_content += FPSTR(EMPTY_ROW);
+	}
+	
 	if (cfg::sht3x_read)
 	{
 		add_table_t_value(FPSTR(SENSORS_SHT3X), FPSTR(INTL_TEMPERATURE), last_value_SHT3X_T);
@@ -2618,7 +2638,7 @@ static void webserver_data_extended_json()
 	String s1;
 	unsigned long age = 0;
 
-	debug_outln_info(F("ws: data json..."));
+	debug_outln_info(F("ws: data extended json..."));
 	if (!count_sends)
 	{
 		s1 = FPSTR(data_first_part);
@@ -2764,8 +2784,8 @@ static void setup_webserver()
 	server.on(F("/removeConfig"), webserver_removeConfig);
 	server.on(F("/reset"), webserver_reset);
 	server.on(F("/data.json"), webserver_data_json);
-	server.on(F("/data_extended.json"), webserver_data_extended_json);
-	server.on(F("/metrics"), webserver_metrics_endpoint);
+	server.on(F("/extended.json"), webserver_data_extended_json);
+	server.on(F("/metric"), webserver_metrics_endpoint);
 	server.on(F("/favicon.ico"), webserver_favicon);
 	server.on(F(STATIC_PREFIX), webserver_static);
 	server.onNotFound(webserver_not_found);
@@ -3428,6 +3448,7 @@ static void fetchSensorSCD30(String &s)
 	debug_outln_verbose(FPSTR(DBG_TXT_END_READING), FPSTR(SENSORS_SCD30));
 }
 
+
 /*****************************************************************
  * read BMP280/BME280 sensor values                              *
  *****************************************************************/
@@ -3435,7 +3456,7 @@ static void fetchSensorBMX280(String &s)
 {
 	const char *const sensor_name = (bmx280.sensorID() == BME280_SENSOR_ID) ? SENSORS_BME280 : SENSORS_BMP280;
 	debug_outln_verbose(FPSTR(DBG_TXT_START_READING), FPSTR(sensor_name));
-
+	
 	bmx280.takeForcedMeasurement();
 	const auto t = bmx280.readTemperature();
 	const auto p = bmx280.readPressure();
@@ -3464,6 +3485,26 @@ static void fetchSensorBMX280(String &s)
 			add_Value2Json(s, F("BMP280_temperature"), FPSTR(DBG_TXT_TEMPERATURE), last_value_BMX280_T);
 		}
 	}
+	debug_outln_info(FPSTR(DBG_TXT_SEP));
+	debug_outln_verbose(FPSTR(DBG_TXT_END_READING), FPSTR(sensor_name));
+}
+/*****************************************************************
+ * read AHTX sensor values                              *
+ *****************************************************************/
+static void fetchSensorAHTX(String &s)
+{
+	const char *const sensor_name = "AHT20";
+	debug_outln_verbose(FPSTR(DBG_TXT_START_READING), FPSTR(sensor_name));
+	sensors_event_t humidityEvent, temperatureEvent;
+	if(cfg::ahtx_read && !ahtX_init_failed){
+		ahtX.getEvent(&humidityEvent, &temperatureEvent);
+		last_value_AHTX_T = temperatureEvent.temperature;
+		last_value_AHTX_H = humidityEvent.relative_humidity;
+		add_Value2Json(s, F("AHT20_temperature"), FPSTR(DBG_TXT_TEMPERATURE), last_value_AHTX_T);
+		add_Value2Json(s, F("AHT20__humidity"), FPSTR(DBG_TXT_HUMIDITY), last_value_AHTX_H);
+	}
+
+	
 	debug_outln_info(FPSTR(DBG_TXT_SEP));
 	debug_outln_verbose(FPSTR(DBG_TXT_END_READING), FPSTR(sensor_name));
 }
@@ -5459,6 +5500,31 @@ static bool initBMX280(char addr)
 }
 
 /*****************************************************************
+ * Init AHTX0                                            *
+ *****************************************************************/
+static bool initAHTX0(char addr)
+{
+	debug_out(String(F("Trying AHTX0 sensor on ")) + String(addr, HEX), DEBUG_MIN_INFO);
+
+	if (ahtX.begin())
+	{
+		debug_outln_info(FPSTR(DBG_TXT_FOUND));
+		sensors_event_t humidityEvent, temperatureEvent;
+		ahtX.getEvent(&humidityEvent, &temperatureEvent);
+		debug_out(String(F("AHT20:")),DEBUG_MIN_INFO);
+		debug_out("Temperatur: " + String(temperatureEvent.temperature) + " °C",DEBUG_MIN_INFO);
+		debug_out(String(F("Luftfeuchtigkeit: ")) + String(humidityEvent.relative_humidity) + String(" %"),DEBUG_MIN_INFO);
+
+		return true;
+	}
+	else
+	{
+		debug_outln_info(FPSTR(DBG_TXT_NOT_FOUND));
+		return false;
+	}
+}
+
+/*****************************************************************
    Init SPS30 PM Sensor
  *****************************************************************/
 static void initSPS30()
@@ -5689,7 +5755,15 @@ static void powerOnTestSensors()
 			bmp_init_failed = true;
 		}
 	}
-
+	
+	if (cfg::ahtx_read)
+	{
+		debug_outln_info(F("Read AHTX0..."));
+		if (!initAHTX0(ahtX_default_i2c_address)) {
+			debug_outln_error(F("Check AHTX0 wiring"));
+			ahtX_init_failed = true;
+		}
+	}
 	if (cfg::bmx280_read)
 	{
 		debug_outln_info(F("Read BMx280..."));
@@ -6238,6 +6312,13 @@ void loop(void)
 			}
 			result = emptyString;
 		}
+		if (cfg::ahtx_read && (!ahtX_init_failed))
+		{
+			fetchSensorAHTX(result);
+			data += result;
+			result = emptyString;
+		}
+		
 		if (cfg::sht3x_read && (!sht3x_init_failed))
 		{
 			// getting temperature and humidity (optional)
