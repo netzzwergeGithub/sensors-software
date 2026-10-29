@@ -3496,15 +3496,23 @@ static void fetchSensorAHTX(String &s)
 	const char *const sensor_name = "AHT20";
 	debug_outln_verbose(FPSTR(DBG_TXT_START_READING), FPSTR(sensor_name));
 	sensors_event_t humidityEvent, temperatureEvent;
-	if(cfg::ahtx_read && !ahtX_init_failed){
-		ahtX.getEvent(&humidityEvent, &temperatureEvent);
-		last_value_AHTX_T = temperatureEvent.temperature;
-		last_value_AHTX_H = humidityEvent.relative_humidity;
+	ahtX.getEvent(&humidityEvent, &temperatureEvent);
+	const auto t = temperatureEvent.temperature;
+	const auto h = humidityEvent.relative_humidity;
+	if (isnan(t) || isnan(h))
+	{
+		last_value_AHTX_T = -128.0;
+		last_value_AHTX_H = -1.0;
+		debug_outln_error(F("AHT20 read failed"));
+	}
+	else
+	{
+		last_value_AHTX_T = t;
+		last_value_AHTX_H = h;
 		add_Value2Json(s, F("AHT20_temperature"), FPSTR(DBG_TXT_TEMPERATURE), last_value_AHTX_T);
 		add_Value2Json(s, F("AHT20__humidity"), FPSTR(DBG_TXT_HUMIDITY), last_value_AHTX_H);
 	}
 
-	
 	debug_outln_info(FPSTR(DBG_TXT_SEP));
 	debug_outln_verbose(FPSTR(DBG_TXT_END_READING), FPSTR(sensor_name));
 }
