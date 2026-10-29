@@ -173,6 +173,8 @@ namespace cfg
 	bool bmp_read = BMP_READ;
 	bool bmx280_read = BMX280_READ;
 	bool ahtx_read = AHTX0_READ;
+	bool humidity_ctrl_enabled = HUMIDITY_CTRL_ENABLED;
+	unsigned humidity_ctrl_border = HUMIDITY_CTRL_BORDER;
 	char height_above_sealevel[8] = "0";
 	bool sht3x_read = SHT3X_READ;
 	bool scd30_read = SCD30_READ;
@@ -452,6 +454,8 @@ bool is_IPS_running;
 
 unsigned long sending_time = 0;
 unsigned long last_update_attempt;
+unsigned long last_humidity_ctrl_millis = 0;
+uint8_t last_humidity_ctrl_output = 0;
 int last_update_returncode;
 int last_sendData_returncode;
 
@@ -1757,6 +1761,11 @@ static void webserver_config_send_body_get(String &page_content)
 	add_form_input(page_content, Config_debug, FPSTR(INTL_DEBUG_LEVEL), 1);
 	add_form_input(page_content, Config_sending_intervall_ms, FPSTR(INTL_MEASUREMENT_INTERVAL), 5);
 	add_form_input(page_content, Config_time_for_wifi_config, FPSTR(INTL_DURATION_ROUTER_MODE), 5);
+	page_content += FPSTR(TABLE_TAG_CLOSE_BR);
+
+	add_form_checkbox(Config_humidity_ctrl_enabled, FPSTR(INTL_HUMIDITY_CTRL));
+	page_content += FPSTR(TABLE_TAG_OPEN);
+	add_form_input(page_content, Config_humidity_ctrl_border, FPSTR(INTL_HUMIDITY_CTRL_BORDER), 3);
 	page_content += FPSTR(TABLE_TAG_CLOSE_BR);
 
 	server.sendContent(page_content);
@@ -3515,6 +3524,75 @@ static void fetchSensorAHTX(String &s)
 
 	debug_outln_info(FPSTR(DBG_TXT_SEP));
 	debug_outln_verbose(FPSTR(DBG_TXT_END_READING), FPSTR(sensor_name));
+}
+
+/*****************************************************************
+ * humidity control: analog output depending on humidity         *
+ *****************************************************************/
+static float averageHumidity()
+{
+	float sum = 0.0;
+	unsigned num_valid = 0;
+	auto addHumidity = [&sum, &num_valid](const float h)
+	{
+		if (h >= 0.0 && h <= 100.0)
+		{
+			sum += h;
+			++num_valid;
+		}
+	};
+	if (cfg::dht_read)
+	{
+		addHumidity(last_value_DHT_H);
+	}
+	if (cfg::htu21d_read)
+	{
+		addHumidity(last_value_HTU21D_H);
+	}
+	if (cfg::bmx280_read)
+	{
+		addHumidity(last_value_BME280_H);
+	}
+	if (cfg::ahtx_read)
+	{
+		addHumidity(last_value_AHTX_H);
+	}
+	if (cfg::sht3x_read)
+	{
+		addHumidity(last_value_SHT3X_H);
+	}
+	if (cfg::scd30_read)
+	{
+		addHumidity(last_value_SCD30_H);
+	}
+	return num_valid ? sum / num_valid : -1.0;
+}
+
+static void updateHumidityControlOutput()
+{
+	uint8_t out = 0;
+	if (cfg::humidity_ctrl_enabled)
+	{
+		const float h = averageHumidity();
+		if (h >= 0.0)
+		{
+			const float diff = h - (float)cfg::humidity_ctrl_border;
+			if (diff >= 5.0)
+			{
+				out = 255;
+			}
+			else if (diff > 0.0)
+			{
+				out = 127;
+			}
+		}
+	}
+	if (out != last_humidity_ctrl_output)
+	{
+		debug_outln_info(F("Humidity control output: "), String(out));
+		last_humidity_ctrl_output = out;
+	}
+	analogWrite(HUMIDITY_CTRL_PIN, out);
 }
 
 /*****************************************************************
@@ -6080,6 +6158,9 @@ else if (cfg::ips_read)
 	logEnabledAPIs();
 	logEnabledDisplays();
 
+	pinMode(HUMIDITY_CTRL_PIN, OUTPUT);
+	digitalWrite(HUMIDITY_CTRL_PIN, LOW);
+
 	delay(50);
 
 	starttime = millis(); // store the start time
@@ -6232,6 +6313,12 @@ void loop(void)
 	{
 		display_values();
 		last_display_millis = act_milli;
+	}
+
+	if (msSince(last_humidity_ctrl_millis) > HUMIDITY_CTRL_UPDATE_INTERVAL_MS)
+	{
+		updateHumidityControlOutput();
+		last_humidity_ctrl_millis = act_milli;
 	}
 
 	server.handleClient();

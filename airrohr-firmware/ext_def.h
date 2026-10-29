@@ -274,6 +274,12 @@ static const char MEASUREMENT_NAME_INFLUX[] PROGMEM = "feinstaub";
 
 #define AHTX0_READ 1
 
+// Humidity control: analog (PWM) output reacting on measured humidity
+#define HUMIDITY_CTRL_PIN D8
+#define HUMIDITY_CTRL_ENABLED 0
+#define HUMIDITY_CTRL_BORDER 60
+#define HUMIDITY_CTRL_UPDATE_INTERVAL_MS 1000
+
 
 // SHT3x, temperature, pressure
 #define SHT3X_READ 0

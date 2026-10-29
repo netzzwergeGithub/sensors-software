@@ -73,6 +73,8 @@ String		user_influx
 Password		pwd_influx
 String		measurement_name_influx
 Bool		ssl_influx
+Bool		humidity_ctrl_enabled
+UInt		humidity_ctrl_border
 """
 
 with open("airrohr-cfg.h", "w") as h:

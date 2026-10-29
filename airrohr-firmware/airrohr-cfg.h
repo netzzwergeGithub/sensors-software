@@ -97,7 +97,8 @@ enum ConfigShapeId {
 	Config_measurement_name_influx,
 	Config_ssl_influx,
 	Config_ahtX_read,
-	
+	Config_humidity_ctrl_enabled,
+	Config_humidity_ctrl_border,
 };
 static constexpr char CFG_KEY_CURRENT_LANG[] PROGMEM = "current_lang";
 static constexpr char CFG_KEY_WLANSSID[] PROGMEM = "wlanssid";
@@ -171,6 +172,8 @@ static constexpr char CFG_KEY_USER_INFLUX[] PROGMEM = "user_influx";
 static constexpr char CFG_KEY_PWD_INFLUX[] PROGMEM = "pwd_influx";
 static constexpr char CFG_KEY_MEASUREMENT_NAME_INFLUX[] PROGMEM = "measurement_name_influx";
 static constexpr char CFG_KEY_SSL_INFLUX[] PROGMEM = "ssl_influx";
+static constexpr char CFG_KEY_HUMIDITY_CTRL_ENABLED[] PROGMEM = "humidity_ctrl_enabled";
+static constexpr char CFG_KEY_HUMIDITY_CTRL_BORDER[] PROGMEM = "humidity_ctrl_border";
 static constexpr ConfigShapeEntry configShape[] PROGMEM = {
 	{ Config_Type_String, sizeof(cfg::current_lang)-1, CFG_KEY_CURRENT_LANG, cfg::current_lang },
 	{ Config_Type_String, sizeof(cfg::wlanssid)-1, CFG_KEY_WLANSSID, cfg::wlanssid },
@@ -244,5 +247,6 @@ static constexpr ConfigShapeEntry configShape[] PROGMEM = {
 	{ Config_Type_String, sizeof(cfg::measurement_name_influx)-1, CFG_KEY_MEASUREMENT_NAME_INFLUX, cfg::measurement_name_influx },
 	{ Config_Type_Bool, 0, CFG_KEY_SSL_INFLUX, &cfg::ssl_influx },
 	{ Config_Type_Bool, 0, CFG_KEY_AHTX_READ, &cfg::ahtx_read },
-	
+	{ Config_Type_Bool, 0, CFG_KEY_HUMIDITY_CTRL_ENABLED, &cfg::humidity_ctrl_enabled },
+	{ Config_Type_UInt, 0, CFG_KEY_HUMIDITY_CTRL_BORDER, &cfg::humidity_ctrl_border },
 };
