@@ -455,7 +455,7 @@ bool is_IPS_running;
 unsigned long sending_time = 0;
 unsigned long last_update_attempt;
 unsigned long last_humidity_ctrl_millis = 0;
-uint8_t last_humidity_ctrl_output = 0;
+uint16 last_humidity_ctrl_output = 0;
 int last_update_returncode;
 int last_sendData_returncode;
 
@@ -3570,20 +3570,27 @@ static float averageHumidity()
 
 static void updateHumidityControlOutput()
 {
-	uint8_t out = 0;
+	uint16 out = 0;
 	if (cfg::humidity_ctrl_enabled)
 	{
 		const float h = averageHumidity();
 		if (h >= 0.0)
 		{
 			const float diff = h - (float)cfg::humidity_ctrl_border;
-			if (diff >= 5.0)
+			if (diff >= 5.0 )
 			{
-				out = 255;
+				out = 1023;
 			}
 			else if (diff > 0.0)
 			{
-				out = 127;
+				if (last_humidity_ctrl_output == 0){
+					out = 1023;	
+				}else
+				{
+					out = 512;
+					
+				}
+				
 			}
 		}
 	}
@@ -3591,6 +3598,7 @@ static void updateHumidityControlOutput()
 	{
 		debug_outln_info(F("Humidity control output: "), String(out));
 		last_humidity_ctrl_output = out;
+		delay(5000);
 	}
 	analogWrite(HUMIDITY_CTRL_PIN, out);
 }
@@ -6158,6 +6166,7 @@ else if (cfg::ips_read)
 	logEnabledAPIs();
 	logEnabledDisplays();
 
+	analogWriteFreq(20000);
 	pinMode(HUMIDITY_CTRL_PIN, OUTPUT);
 	digitalWrite(HUMIDITY_CTRL_PIN, LOW);
 
